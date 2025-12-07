@@ -29,10 +29,11 @@
 
     <script>
         // ⚠️ USE AS CHAVES DO NOVO PROJETO (DropAuth) ⚠️
-        const SUPABASE_URL = 'SUA_NOVA_URL'; 
-        const SUPABASE_KEY = 'SUA_NOVA_KEY';
+        const SUPABASE_URL = 'SUA_NOVA_URL_AQUI'; 
+        const SUPABASE_KEY = 'SUA_NOVA_KEY_AQUI';
         
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Correção: Usamos 'sbClient' para não conflitar com a biblioteca 'supabase'
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         const CIDADE_FIXA = "Mossoró, Rio Grande do Norte, Brasil"; 
         const NUMERO_ADMIN = "5584982005039"; 
@@ -45,7 +46,7 @@
         // --- VERIFICAÇÃO DE SESSÃO AUTOMÁTICA ---
         window.onload = async function() {
             // Verifica se já tem alguém logado no navegador
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await sbClient.auth.getSession();
             
             if (session) {
                 userSession = session;
@@ -67,7 +68,7 @@
             <button onclick="showScreen('register')" class="w-full btn-primary font-bold py-3 rounded-xl shadow-lg">Criar Conta Grátis</button>
             <button onclick="showScreen('login')" class="w-full btn-outline font-bold py-3 rounded-xl shadow-sm">Já tenho Conta</button>
         </div>
-        <p class="mt-6 text-xs text-gray-400">Auth Seguro v1.0</p>
+        <p class="mt-6 text-xs text-gray-400">Auth Seguro v1.1</p>
     </div>
 
     <!-- TELA 2: CADASTRO (EMAIL + DADOS) -->
@@ -171,7 +172,7 @@
                 // Cria usuário no Auth
                 // Os dados extras (loja, zap) vão nos METADADOS
                 // O Gatilho SQL que criamos vai pegar esses metadados e jogar na tabela profiles
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await sbClient.auth.signUp({
                     email: email,
                     password: senha,
                     options: {
@@ -207,7 +208,7 @@
             btn.disabled = true; load.classList.remove('hidden');
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await sbClient.auth.signInWithPassword({
                     email: email,
                     password: senha
                 });
@@ -227,10 +228,10 @@
 
         // --- CARREGAR DADOS DO PERFIL (PÚBLICO) ---
         async function carregarPerfil() {
-            const { user } = await supabase.auth.getUser();
+            const { data: { user } } = await sbClient.auth.getUser();
             
             // Busca na tabela profiles usando o ID do usuário logado
-            const { data, error } = await supabase
+            const { data, error } = await sbClient
                 .from('profiles')
                 .select('*')
                 .eq('id', user.id)
@@ -247,21 +248,21 @@
 
         // --- LOGOUT ---
         async function fazerLogout() {
-            await supabase.auth.signOut();
+            await sbClient.auth.signOut();
             location.reload();
         }
 
         async function resetarSenha() {
             const email = prompt("Digite seu e-mail para receber o link:");
             if(email) {
-                const { error } = await supabase.auth.resetPasswordForEmail(email);
+                const { error } = await sbClient.auth.resetPasswordForEmail(email);
                 if(error) alert("Erro: " + error.message);
                 else alert("E-mail de recuperação enviado!");
             }
         }
 
         // --- CALCULO E ENVIO (SIMPLIFICADO) ---
-        async function calcularDistancia() {
+        async function calcularFrete() {
              const origem = document.getElementById('origem').value;
              const destino = document.getElementById('destino').value;
              if(!origem || !destino) return alert("Preencha endereços");
@@ -280,7 +281,7 @@
 
         async function confirmarPedido() {
             // Salva pedido vinculado ao ID seguro do usuário
-            const { error } = await supabase.from('pedidos').insert([{
+            const { error } = await sbClient.from('pedidos').insert([{
                 user_id: userSession.user.id, // Vínculo automático e seguro
                 origem: document.getElementById('origem').value,
                 destino: document.getElementById('destino').value,
@@ -302,3 +303,4 @@
 </html>
 
 
+                    
