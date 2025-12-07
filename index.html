@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Drop Entregas (Pro)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f3f4f6; padding-bottom: 90px; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .btn-primary { background-color: #1E40AF; color: white; transition: 0.2s; }
+        .btn-primary:hover { background-color: #1E3A8A; }
+        .btn-primary:disabled { background-color: #93C5FD; cursor: not-allowed; }
+        .btn-outline { background-color: white; color: #1E40AF; border: 2px solid #1E40AF; }
+
+        .spinner { border: 3px solid rgba(0,0,0,0.1); border-left-color: #1E40AF; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
+
+    <script>
+        // ⚠️ USE AS CHAVES DO NOVO PROJETO (DropAuth) ⚠️
+        const SUPABASE_URL = 'SUA_NOVA_URL'; 
+        const SUPABASE_KEY = 'SUA_NOVA_KEY';
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        const CIDADE_FIXA = "Mossoró, Rio Grande do Norte, Brasil"; 
+        const NUMERO_ADMIN = "5584982005039"; 
+        const PRECO_BASE = 6.00; const PRECO_POR_KM = 1.80; const TAXA_FIXA_CENTRAL = 0.50;
+
+        let userSession = null;
+        let userProfile = null;
+        let distanciaFinal = 0; let valorFinal = 0;
+
+        // --- VERIFICAÇÃO DE SESSÃO AUTOMÁTICA ---
+        window.onload = async function() {
+            // Verifica se já tem alguém logado no navegador
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                userSession = session;
+                await carregarPerfil();
+                showScreen('app');
+            } else {
+                showScreen('welcome');
+            }
+        };
+    </script>
+
+    <!-- TELA 1: BOAS-VINDAS -->
+    <div id="screen-welcome" class="hidden w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 text-center fade-in m-4">
+        <div class="mb-8 text-blue-700"><i class="fas fa-cube text-6xl"></i></div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Drop Entregas</h1>
+        <p class="text-gray-500 text-sm mb-6">Plataforma Profissional</p>
+        
+        <div class="space-y-3">
+            <button onclick="showScreen('register')" class="w-full btn-primary font-bold py-3 rounded-xl shadow-lg">Criar Conta Grátis</button>
+            <button onclick="showScreen('login')" class="w-full btn-outline font-bold py-3 rounded-xl shadow-sm">Já tenho Conta</button>
+        </div>
+        <p class="mt-6 text-xs text-gray-400">Auth Seguro v1.0</p>
+    </div>
+
+    <!-- TELA 2: CADASTRO (EMAIL + DADOS) -->
+    <div id="screen-register" class="hidden w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 fade-in m-4 relative">
+        <button onclick="showScreen('welcome')" class="absolute top-4 left-4 text-gray-400"><i class="fas fa-arrow-left"></i></button>
+        <h2 class="text-xl font-bold text-center mb-4">Nova Conta</h2>
+        
+        <div class="space-y-3 h-96 overflow-y-auto px-1">
+            <input type="text" id="reg-loja" class="w-full border rounded-lg p-3 text-sm" placeholder="Nome da Loja">
+            <input type="text" id="reg-resp" class="w-full border rounded-lg p-3 text-sm" placeholder="Nome Responsável">
+            <input type="text" id="reg-zap" class="w-full border rounded-lg p-3 text-sm" placeholder="WhatsApp">
+            
+            <div class="border-t pt-2 mt-2">
+                <p class="text-xs font-bold text-gray-500 mb-2">DADOS DE ACESSO</p>
+                <input type="email" id="reg-email" class="w-full border rounded-lg p-3 text-sm mb-2" placeholder="Seu E-mail">
+                <input type="password" id="reg-senha" class="w-full border rounded-lg p-3 text-sm" placeholder="Sua Senha (min 6 digitos)">
+            </div>
+
+            <button onclick="fazerCadastro()" id="btn-cad" class="w-full btn-primary font-bold py-3 rounded-xl mt-4 flex justify-center gap-2">
+                <span>Cadastrar</span><div id="load-cad" class="spinner hidden"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- TELA 3: LOGIN (EMAIL + SENHA) -->
+    <div id="screen-login" class="hidden w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 fade-in m-4 relative">
+        <button onclick="showScreen('welcome')" class="absolute top-4 left-4 text-gray-400"><i class="fas fa-arrow-left"></i></button>
+        <h2 class="text-xl font-bold text-center mb-6">Entrar</h2>
+        
+        <div class="space-y-4">
+            <input type="email" id="log-email" class="w-full border rounded-lg p-4 text-lg outline-none focus:border-blue-600" placeholder="E-mail">
+            <input type="password" id="log-senha" class="w-full border rounded-lg p-4 text-lg outline-none focus:border-blue-600" placeholder="Senha">
+            
+            <button onclick="fazerLogin()" id="btn-log" class="w-full btn-primary font-bold py-4 rounded-xl shadow-lg flex justify-center gap-2">
+                <span>Entrar</span><div id="load-log" class="spinner hidden"></div>
+            </button>
+            
+            <p class="text-center text-xs text-blue-600 cursor-pointer hover:underline" onclick="resetarSenha()">Esqueci minha senha</p>
+        </div>
+    </div>
+
+    <!-- TELA 4: APP (LOGADO) -->
+    <div id="screen-app" class="hidden w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden fade-in relative pb-20">
+        <div class="bg-blue-700 p-6 text-white relative">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-xs opacity-80">Olá, <span id="user-name">...</span></p>
+                    <p class="text-xs opacity-60">ID: <span id="user-code">...</span></p>
+                </div>
+                <button onclick="fazerLogout()" class="text-xs bg-blue-900 px-3 py-1 rounded-full"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+            <div class="bg-white/10 p-4 rounded-xl flex justify-between items-center shadow-lg">
+                <div><p class="text-xs text-blue-100">Saldo</p><p class="text-2xl font-bold" id="user-saldo">R$ 0,00</p></div>
+                <button class="bg-white px-4 py-2 rounded-lg text-blue-700 text-xs font-bold"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+
+        <div class="p-5 space-y-4">
+            <!-- ROTA -->
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
+                <input type="text" id="origem" placeholder="Retirada" class="w-full p-2 text-sm rounded-lg border">
+                <input type="text" id="destino" placeholder="Entrega" class="w-full p-2 text-sm rounded-lg border">
+            </div>
+            
+            <!-- PAGAMENTOS -->
+            <div class="grid grid-cols-2 gap-3">
+                 <select id="pg-entrega" class="w-full p-2 text-sm border rounded-lg"><option value="PIX">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Carteira">Carteira</option></select>
+                 <select id="pg-produto" class="w-full p-2 text-sm border rounded-lg"><option value="Pago">Já Pago</option><option value="Cobrar">Cobrar</option></select>
+            </div>
+
+            <button onclick="calcularFrete()" id="btn-calc" class="w-full btn-primary font-bold py-3 rounded-xl">Calcular Frete</button>
+            
+            <div id="resultado" class="hidden text-center">
+                <p class="text-2xl font-bold text-green-600">R$ <span id="val-frete">0,00</span></p>
+                <button onclick="confirmarPedido()" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl mt-2">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function(){ $('#reg-zap').mask('(00) 00000-0000'); });
+        function showScreen(id) { document.querySelectorAll('[id^="screen-"]').forEach(el => el.classList.add('hidden')); document.getElementById('screen-'+id).classList.remove('hidden'); }
+
+        // --- CADASTRO (AUTH NATIVO) ---
+        async function fazerCadastro() {
+            const email = document.getElementById('reg-email').value;
+            const senha = document.getElementById('reg-senha').value;
+            const loja = document.getElementById('reg-loja').value;
+            const zap = document.getElementById('reg-zap').value;
+            const resp = document.getElementById('reg-resp').value;
+            
+            const btn = document.getElementById('btn-cad');
+            const load = document.getElementById('load-cad');
+
+            if(!email || !senha || !loja) { alert("Preencha tudo."); return; }
+            if(senha.length < 6) { alert("Senha precisa de 6 dígitos."); return; }
+
+            btn.disabled = true; load.classList.remove('hidden');
+
+            try {
+                // Cria usuário no Auth
+                // Os dados extras (loja, zap) vão nos METADADOS
+                // O Gatilho SQL que criamos vai pegar esses metadados e jogar na tabela profiles
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: senha,
+                    options: {
+                        data: {
+                            nome_loja: loja,
+                            whatsapp: zap,
+                            responsavel: resp
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                alert("Conta criada com sucesso! Entrando...");
+                userSession = data.session;
+                await carregarPerfil();
+                showScreen('app');
+
+            } catch (error) {
+                alert("Erro: " + error.message);
+            } finally {
+                btn.disabled = false; load.classList.add('hidden');
+            }
+        }
+
+        // --- LOGIN (AUTH NATIVO) ---
+        async function fazerLogin() {
+            const email = document.getElementById('log-email').value;
+            const senha = document.getElementById('log-senha').value;
+            const btn = document.getElementById('btn-log');
+            const load = document.getElementById('load-log');
+
+            btn.disabled = true; load.classList.remove('hidden');
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: senha
+                });
+
+                if (error) throw error;
+
+                userSession = data.session;
+                await carregarPerfil();
+                showScreen('app');
+
+            } catch (error) {
+                alert("Login falhou: " + error.message);
+            } finally {
+                btn.disabled = false; load.classList.add('hidden');
+            }
+        }
+
+        // --- CARREGAR DADOS DO PERFIL (PÚBLICO) ---
+        async function carregarPerfil() {
+            const { user } = await supabase.auth.getUser();
+            
+            // Busca na tabela profiles usando o ID do usuário logado
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (data) {
+                userProfile = data;
+                document.getElementById('user-name').innerText = data.nome_loja;
+                document.getElementById('user-code').innerText = data.codigo_visual;
+                document.getElementById('user-saldo').innerText = "R$ " + (data.saldo || 0).toFixed(2);
+                document.getElementById('origem').value = data.endereco || data.nome_loja;
+            }
+        }
+
+        // --- LOGOUT ---
+        async function fazerLogout() {
+            await supabase.auth.signOut();
+            location.reload();
+        }
+
+        async function resetarSenha() {
+            const email = prompt("Digite seu e-mail para receber o link:");
+            if(email) {
+                const { error } = await supabase.auth.resetPasswordForEmail(email);
+                if(error) alert("Erro: " + error.message);
+                else alert("E-mail de recuperação enviado!");
+            }
+        }
+
+        // --- CALCULO E ENVIO (SIMPLIFICADO) ---
+        async function calcularDistancia() {
+             const origem = document.getElementById('origem').value;
+             const destino = document.getElementById('destino').value;
+             if(!origem || !destino) return alert("Preencha endereços");
+             
+             document.getElementById('btn-calc').innerText = "Calculando...";
+             
+             // Simulando calculo para teste (Use a API do Nominatim aqui igual ao outro código)
+             setTimeout(() => {
+                 distanciaFinal = 5.5;
+                 valorFinal = (PRECO_BASE + (distanciaFinal * PRECO_POR_KM)).toFixed(2);
+                 document.getElementById('val-frete').innerText = valorFinal.replace('.', ',');
+                 document.getElementById('btn-calc').classList.add('hidden');
+                 document.getElementById('resultado').classList.remove('hidden');
+             }, 1000);
+        }
+
+        async function confirmarPedido() {
+            // Salva pedido vinculado ao ID seguro do usuário
+            const { error } = await supabase.from('pedidos').insert([{
+                user_id: userSession.user.id, // Vínculo automático e seguro
+                origem: document.getElementById('origem').value,
+                destino: document.getElementById('destino').value,
+                valor_frete: parseFloat(valorFinal),
+                forma_pagamento: document.getElementById('pg-entrega').value
+            }]);
+
+            if(error) { alert("Erro ao salvar pedido."); return; }
+
+            const msg = `Nova Corrida! Loja: ${userProfile.nome_loja} (Cod: ${userProfile.codigo_visual})`;
+            window.open(`https://wa.me/${NUMERO_ADMIN}?text=${msg}`, '_blank');
+            location.reload();
+        }
+
+        function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) { var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1); var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; }
+        function deg2rad(deg) { return deg * (Math.PI/180); }
+    </script>
+</body>
+</html>
+
+
