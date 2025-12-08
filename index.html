@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- QRCode -->
+    <!-- QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
@@ -38,6 +38,13 @@
         input:checked + .slider { background-color: #1E40AF; }
         input:checked + .slider:before { transform: translateX(20px); }
 
+        /* Menu Inferior */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; z-index: 50; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); max-width: 28rem; margin: 0 auto; }
+        @media (min-width: 768px) { .bottom-nav { border-radius: 0 0 1.5rem 1.5rem; } }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #9CA3AF; cursor: pointer; flex: 1; height: 100%; }
+        .nav-item.active { color: #1E40AF; font-weight: bold; }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; }
+
         .input-readonly { background-color: #F3F4F6; color: #4B5563; cursor: not-allowed; }
         .app-container { width: 100%; min-height: 100vh; background-color: white; padding-bottom: 80px; }
         @media (min-width: 768px) { .app-container { max-width: 28rem; min-height: auto; height: 90vh; border-radius: 1.5rem; overflow: hidden; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; } body { display: flex; align-items: center; justify-content: center; min-height: 100vh; } }
@@ -53,14 +60,53 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
 
-    <!-- LOADING GLOBAL -->
-    <div id="global-loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100]">
-        <div class="spinner w-10 h-10 border-4 mb-4"></div>
-        <p class="text-gray-500 text-sm font-bold">Carregando Drop...</p>
-    </div>
+    <script>
+        // --- CHAVES DO SISTEMA ---
+        const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpibHd3b3Fmbmhtb2V4b251emJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNjUyNzYsImV4cCI6MjA4MDY0MTI3Nn0.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU';
+        const MAKE_WEBHOOK_URL = ""; 
+
+        // Inicializa Supabase de forma segura
+        let sbClient = null;
+        try {
+            sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch(e) {
+            console.error("Erro ao iniciar Supabase:", e);
+        }
+
+        const CIDADE_FIXA = "Mossoró, Rio Grande do Norte, Brasil"; 
+        const NUMERO_ADMIN = "5584982005039"; 
+        const PRECO_BASE = 6.00; const PRECO_POR_KM = 1.80; const TAXA_RETORNO = 0.70; const TAXA_FIXA_CENTRAL = 0.50;
+
+        let userSession = null;
+        let userProfile = null;
+        let distanciaFinal = 0; let valorFinal = 0;
+
+        // VERIFICA SESSÃO AO ABRIR
+        window.onload = async function() {
+            if(!sbClient) return alert("Erro crítico: Banco de dados não inicializado.");
+            
+            // Tenta recuperar sessão
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (session) {
+                userSession = session;
+                await carregarPerfil();
+                showScreen('app');
+            } else {
+                showScreen('welcome');
+            }
+        };
+
+        // --- FUNÇÃO DE SEGURANÇA (EVITA O ERRO 'NULL') ---
+        function safeText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+            else console.warn(`Elemento '${id}' não encontrado para escrever: ${text}`);
+        }
+    </script>
 
     <!-- TELA 1: BOAS-VINDAS -->
-    <div id="screen-welcome" class="hidden app-container p-8 text-center fade-in flex flex-col justify-center">
+    <div id="screen-welcome" class="app-container p-8 text-center fade-in flex flex-col justify-center">
         <div class="mb-8">
             <div class="inline-block p-5 rounded-full bg-blue-50 text-blue-700 mb-4 shadow-sm"><i class="fas fa-box-open text-5xl"></i></div>
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Drop Entregas</h1>
@@ -74,7 +120,7 @@
                 <i class="fas fa-lock"></i> Acessar Conta
             </button>
         </div>
-        <p class="mt-8 text-xs text-gray-400">Versão Final 23.1</p>
+        <p class="mt-8 text-xs text-gray-400">Versão 24.0 (Safe Mode)</p>
     </div>
 
     <!-- TELA 2: CADASTRO -->
@@ -87,7 +133,7 @@
                 <p class="text-[10px] uppercase font-bold text-blue-600 mb-2">DADOS DO ESTABELECIMENTO</p>
                 <div class="space-y-3">
                     <input type="text" id="reg-nome-loja" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="Ex: Pizzaria Sabor & Arte">
-                    <input type="text" id="reg-zap-loja" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="Ex: (84) 99988-7766">
+                    <input type="text" id="reg-zap-loja" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="WhatsApp Loja (Ex: 84 99999-9999)">
                 </div>
             </div>
             
@@ -95,20 +141,20 @@
                 <p class="text-[10px] uppercase font-bold text-gray-500 mb-2">RESPONSÁVEL</p>
                 <div class="space-y-3">
                     <input type="text" id="reg-nome-resp" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="Ex: João da Silva">
-                    <input type="text" id="reg-zap-resp" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="Ex: (84) 98877-6655">
+                    <input type="text" id="reg-zap-resp" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="WhatsApp Pessoal (Ex: 84 98877-6655)">
                 </div>
             </div>
 
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 relative">
                 <p class="text-[10px] uppercase font-bold text-gray-500 mb-2">ENDEREÇO FIXO DE COLETA</p>
                 <div class="relative mb-3">
-                    <input type="text" id="reg-cep" onblur="buscarCep('reg')" class="w-full bg-white border rounded-lg p-3 text-sm pl-10 outline-none focus:border-blue-600" placeholder="Ex: 59600-000">
+                    <input type="text" id="reg-cep" onblur="buscarCep('reg')" class="w-full bg-white border rounded-lg p-3 text-sm pl-10 outline-none focus:border-blue-600" placeholder="CEP (00000-000)">
                     <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
                 </div>
                 <div class="space-y-3">
                     <input type="text" id="reg-rua" class="w-full bg-gray-100 border rounded-lg p-3 text-sm input-readonly" placeholder="Rua" readonly>
                     <div class="grid grid-cols-3 gap-2">
-                        <div class="col-span-1"><input type="text" id="reg-num" class="w-full bg-white border border-blue-300 rounded-lg p-3 text-sm font-bold outline-none focus:border-blue-600" placeholder="Ex: 100"></div>
+                        <div class="col-span-1"><input type="text" id="reg-num" class="w-full bg-white border border-blue-300 rounded-lg p-3 text-sm font-bold outline-none focus:border-blue-600" placeholder="Nº"></div>
                         <div class="col-span-2"><input type="text" id="reg-bairro" class="w-full bg-gray-100 border rounded-lg p-3 text-sm input-readonly" placeholder="Bairro" readonly></div>
                     </div>
                     <input type="text" id="reg-cidade" class="w-full bg-gray-100 border rounded-lg p-3 text-sm input-readonly" placeholder="Cidade" readonly>
@@ -121,12 +167,13 @@
                 <input type="password" id="reg-senha" class="w-full border rounded-lg p-3 text-sm" placeholder="Crie uma Senha (Mín. 6 dígitos)">
             </div>
 
+            <!-- Botão com ID correto e chamada de função -->
             <button onclick="fazerCadastro()" id="btn-cad" class="w-full btn-primary font-bold py-4 rounded-xl mt-4 flex justify-center items-center gap-2">
                 <span>Cadastrar</span><div id="load-cad" class="spinner hidden"></div>
             </button>
         </div>
-                                                    </div>
-    <!-- TELA 3: LOGIN -->
+    </div>
+        <!-- TELA 3: LOGIN -->
     <div id="screen-login" class="hidden app-container p-6 fade-in relative flex flex-col justify-center">
         <button onclick="showScreen('welcome')" class="absolute top-4 left-4 text-gray-400 hover:text-blue-700"><i class="fas fa-arrow-left text-xl"></i></button>
         <div class="text-center mb-8"><div class="inline-block p-4 rounded-full bg-blue-50 text-blue-700 mb-4"><i class="fas fa-shield-alt text-3xl"></i></div><h2 class="text-xl font-bold text-gray-800">Login</h2></div>
@@ -143,11 +190,11 @@
     <div id="screen-app" class="hidden app-container fade-in relative">
         <div class="bg-blue-700 p-6 text-white relative">
             <div class="flex justify-between items-start mb-4">
-                <div><p class="text-xs opacity-80">Olá, <span id="user-name">...</span></p><p class="text-xs opacity-60">ID: <span id="user-code">...</span></p></div>
+                <div><p class="text-xs opacity-80">Olá, <span id="app-user-name">...</span></p><p class="text-xs opacity-60">ID: <span id="app-user-code">...</span></p></div>
                 <button onclick="fazerLogout()" class="text-xs bg-blue-900 px-3 py-1 rounded-full"><i class="fas fa-sign-out-alt"></i></button>
             </div>
             <div class="bg-white/10 p-4 rounded-xl flex justify-between items-center shadow-lg">
-                <div><p class="text-xs text-blue-100">Saldo</p><p class="text-2xl font-bold" id="user-saldo">R$ 0,00</p></div>
+                <div><p class="text-xs text-blue-100">Saldo</p><p class="text-2xl font-bold" id="display-saldo">R$ 0,00</p></div>
                 <button onclick="abrirRecarga()" class="bg-white px-4 py-2 rounded-lg text-blue-700 text-xs font-bold shadow-lg hover:bg-blue-50 active:scale-95 transition flex items-center gap-1"><i class="fas fa-plus"></i> Add</button>
             </div>
         </div>
@@ -182,7 +229,6 @@
                     </div>
                 </div>
                 
-                <!-- BOTÃO RETORNO -->
                 <div id="box-retorno" class="switch-container bg-white border border-gray-200">
                     <div class="flex items-center gap-2"><i id="icon-retorno" class="fas fa-arrow-right text-gray-400"></i><span id="text-retorno" class="text-sm font-bold text-gray-500">Sem retorno!</span></div>
                     <label class="switch"><input type="checkbox" id="retorno" onchange="recalcularTotal(); mudarStatusRetorno()"><span class="slider"></span></label>
@@ -195,9 +241,8 @@
             </div>
             <button onclick="enviarParaCentral()" id="btn-enviar" class="hidden w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2"><i class="fab fa-whatsapp text-2xl"></i> Confirmar Pedido</button>
         </div>
-                                                                                                                                                         </div>
-    
-        <!-- TELA 5: HISTÓRICO -->
+    </div>
+       <!-- TELA 5: HISTÓRICO -->
     <div id="screen-history" class="hidden app-container fade-in relative flex flex-col"><div class="bg-blue-700 p-4 text-white text-center font-bold">Meus Pedidos</div><div id="lista-pedidos" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div></div>
     
     <!-- TELA 6: EXTRATO -->
@@ -215,14 +260,13 @@
     <!-- MODAL SUCESSO -->
     <div id="modal-success" class="hidden fixed inset-0 bg-green-900/90 z-[60] flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-3xl p-8 text-center w-full max-w-xs shadow-2xl"><div class="mx-auto bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mb-4"><i class="fas fa-check text-4xl text-green-600"></i></div><h2 class="text-2xl font-bold text-gray-800 mb-2">Pedido Enviado!</h2><p class="text-sm text-gray-500 mb-6">Entregue este código ao motoboy:</p><div class="bg-gray-100 p-4 rounded-xl border-2 border-dashed border-gray-300 mb-6"><p class="text-xs text-gray-400 uppercase tracking-widest mb-1">PIN DE SEGURANÇA</p><p id="display-pin" class="text-4xl font-mono font-bold text-blue-600 tracking-widest">0000</p></div><button onclick="location.reload()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-xl">Fechar</button></div></div>
 
-    <!-- MENU INFERIOR -->
+    <!-- MODAL RECARGA -->
+    <div id="modal-recarga" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center"><h3 class="font-bold text-lg mb-2">Recarregar Saldo</h3><div id="step-valor"><input type="number" id="valor-recarga" class="w-full border rounded-lg p-3 text-center text-xl font-bold mb-4" placeholder="R$ 0,00"><button onclick="gerarPixRecarga()" class="w-full btn-primary font-bold py-3 rounded-xl">Gerar Pix</button></div><div id="step-qr" class="hidden"><div id="qrcode-container" class="flex justify-center mb-4 p-2 border rounded-lg"></div><textarea id="pix-copia-cola" class="w-full text-[10px] bg-gray-100 p-2 rounded mb-2 h-16 text-gray-500" readonly></textarea><button onclick="copiarPix()" class="w-full bg-green-600 text-white text-sm font-bold py-2 rounded-lg mb-2">Copiar Código</button></div><div id="loading-pix" class="hidden py-4"><div class="spinner mx-auto"></div></div><button onclick="fecharRecarga()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button></div></div>
+       <!-- MENU INFERIOR -->
     <div id="bottom-menu" class="hidden bottom-nav w-full max-w-md"><div class="nav-item active" onclick="navegar('app', this)"><i class="fas fa-home"></i><span>Início</span></div><div class="nav-item" onclick="navegar('history', this); carregarHistorico()"><i class="fas fa-list"></i><span>Pedidos</span></div><div class="nav-item" onclick="navegar('extract', this); carregarExtrato()"><i class="fas fa-file-invoice-dollar"></i><span>Extrato</span></div><div class="nav-item" onclick="navegar('profile', this); abrirPerfil()"><i class="fas fa-user"></i><span>Perfil</span></div></div>
 
     <script>
-        // MÁSCARAS
-        $(document).ready(function(){ 
-            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
-        });
+        $(document).ready(function(){ $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000'); });
 
         // VALIDAR TELEFONE
         function validarTelefone(tel) {
@@ -232,49 +276,16 @@
             return true;
         }
 
-        // --- CHAVES ---
-        const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5uaWpraGdzamFyaXhveWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNjUyNzYsImV4cCI6MjA4MDY0MTI3Nn0.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU';
-        const MAKE_WEBHOOK_URL = ""; 
-
-        // Inicializa cliente
-        let sbClient = null;
-        try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error("Erro Supabase:", e); }
-
-        const CIDADE_FIXA = "Mossoró, Rio Grande do Norte, Brasil"; 
-        const NUMERO_ADMIN = "5584982005039"; 
-        const PRECO_BASE = 6.00; const PRECO_POR_KM = 1.80; const TAXA_RETORNO = 0.70; const TAXA_FIXA_CENTRAL = 0.50;
-
-        let userSession = null; let userProfile = null; let distanciaFinal = 0; let valorFinal = 0;
-
-        window.onload = async function() {
-            const globalLoad = document.getElementById('global-loading');
-            try {
-                if(!sbClient) throw new Error("Cliente DB nulo");
-                const { data: { session } } = await sbClient.auth.getSession();
-                if (session) {
-                    userSession = session;
-                    await carregarPerfil();
-                    showScreen('app');
-                } else {
-                    showScreen('welcome');
-                }
-            } catch(e) {
-                console.error(e);
-                showScreen('welcome');
-            } finally {
-                if(globalLoad) globalLoad.style.display = 'none';
-            }
-        };
-
         function toggleDropdown(id) { const list = document.getElementById(`list-${id}`); if(id === 'entrega') document.getElementById('list-produto').classList.remove('show'); else document.getElementById('list-entrega').classList.remove('show'); list.classList.toggle('show'); }
         function selectOption(id, value, text) { document.getElementById(`pagamento_${id}`).value = value; document.getElementById(`display-${id}`).innerText = text; document.getElementById(`list-${id}`).classList.remove('show'); }
         document.addEventListener('click', function(e) { if (!e.target.closest('.relative')) { document.querySelectorAll('.custom-options').forEach(el => el.classList.remove('show')); } });
 
         function showScreen(id) { ['welcome', 'register', 'login', 'app', 'history', 'extract', 'profile'].forEach(s => document.getElementById('screen-'+s).classList.add('hidden')); document.getElementById('screen-'+id).classList.remove('hidden'); if(['app', 'history', 'extract', 'profile'].includes(id)) { document.getElementById('bottom-menu').classList.remove('hidden'); document.getElementById('bottom-menu').classList.add('flex'); } else { document.getElementById('bottom-menu').classList.add('hidden'); document.getElementById('bottom-menu').classList.remove('flex'); } }
         function navegar(tela, elemento) { showScreen(tela); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); elemento.classList.add('active'); }
-                // --- CADASTRO ---
+
+        // --- CADASTRO ---
         async function fazerCadastro() {
+            console.log("Clique cadastro");
             const email = document.getElementById('reg-email').value; const senha = document.getElementById('reg-senha').value; const loja = document.getElementById('reg-nome-loja').value; const zap = document.getElementById('reg-zap-loja').value; const resp = document.getElementById('reg-nome-resp').value; const zapResp = document.getElementById('reg-zap-resp').value; const cep = document.getElementById('reg-cep').value; const rua = document.getElementById('reg-rua').value; const num = document.getElementById('reg-num').value; const bairro = document.getElementById('reg-bairro').value; const cidade = document.getElementById('reg-cidade').value;
             const btn = document.getElementById('btn-cad'); const load = document.getElementById('load-cad');
 
@@ -290,7 +301,6 @@
                     email: email, password: senha,
                     options: { data: { nome_loja: loja, whatsapp: zap, responsavel: resp, cep: cep, endereco: `${rua}, ${num}, ${bairro}`, numero: num, bairro: bairro, cidade: cidade } }
                 });
-                
                 if (error) throw error;
                 alert("Conta criada! Entrando...");
                 userSession = data.session; await carregarPerfil(); showScreen('app');
@@ -316,20 +326,23 @@
             const { data } = await sbClient.from('profiles').select('*').eq('id', user.id).single();
             if (data) {
                 userProfile = data;
-                document.getElementById('app-user-name').innerText = data.nome_loja;
-                document.getElementById('user-code').innerText = data.codigo_visual;
-                document.getElementById('user-saldo').innerText = "R$ " + (data.saldo || 0).toFixed(2);
+                safeText('app-user-name', data.nome_loja);
+                safeText('app-user-code', data.codigo_visual || '...');
+                safeText('display-saldo', "R$ " + (data.saldo || 0).toFixed(2));
+                safeText('saldo-extrato', "R$ " + (data.saldo || 0).toFixed(2));
                 document.getElementById('origem').value = data.endereco || data.nome_loja;
                 monitorarSaldo();
             }
         }
         
+        // Função segura para evitar erro de NULL
+        function safeText(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; }
+
         async function resetarSenha() { const email = prompt("Digite seu e-mail:"); if(email) { const { error } = await sbClient.auth.resetPasswordForEmail(email); alert(error ? "Erro." : "Verifique seu e-mail."); } }
         function fazerLogout() { sbClient.auth.signOut(); location.reload(); }
         async function buscarCep(prefixo) { let cep = document.getElementById(prefixo + '-cep').value.replace(/\D/g, ''); if(cep.length !== 8) return; try { const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await res.json(); if(!data.erro) { document.getElementById(prefixo + '-rua').value = data.logradouro; document.getElementById(prefixo + '-bairro').value = data.bairro; document.getElementById(prefixo + '-cidade').value = `${data.localidade}/${data.uf}`; document.getElementById(prefixo + '-num').focus(); } } catch(e){} }
-        function monitorarSaldo() { sbClient.channel('custom-all-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userSession.user.id}` }, (payload) => { document.getElementById('display-saldo').innerText = "R$ " + payload.new.saldo.toFixed(2); }).subscribe(); }
-
-        // --- APP ---
+        function monitorarSaldo() { sbClient.channel('custom-all-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userSession.user.id}` }, (payload) => { document.getElementById('display-saldo').innerText = "R$ " + payload.new.saldo.toFixed(2); document.getElementById('saldo-extrato').innerText = "R$ " + payload.new.saldo.toFixed(2); }).subscribe(); }
+               // --- APP ---
         async function carregarHistorico() { const div = document.getElementById('lista-pedidos'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('pedidos').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem pedidos.</p>'; return; } data.forEach(p => { const date = new Date(p.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm mb-2"><div class="flex justify-between mb-1"><span class="font-bold text-gray-700 w-2/3 truncate">${p.destino}</span><span class="font-bold text-blue-600">R$ ${p.valor_frete}</span></div><div class="flex justify-between text-xs text-gray-500 mb-2"><span>${date}</span><span>${p.forma_pagamento}</span></div><div class="bg-blue-50 p-2 rounded text-center border border-blue-100"><p class="text-[10px] text-blue-800 uppercase font-bold">Código de Recebimento</p><p class="text-xl font-mono font-bold text-blue-600 tracking-widest">${p.pin_entrega || '---'}</p></div></div>`; }); }
         async function carregarExtrato() { const div = document.getElementById('lista-extrato'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('transacoes').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem transações.</p>'; return; } data.forEach(t => { const date = new Date(t.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); const cor = t.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'; const sinal = t.tipo === 'entrada' ? '+' : '-'; div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center mb-2"><div><p class="text-sm font-bold text-gray-700">${t.descricao}</p><p class="text-xs text-gray-400">${date}</p></div><p class="font-bold ${cor}">${sinal} R$ ${t.valor}</p></div>`; }); }
 
@@ -380,7 +393,7 @@
             }]);
 
             // MODAL SUCESSO
-                    document.getElementById('display-pin').innerText = pinSeguranca;
+            document.getElementById('display-pin').innerText = pinSeguranca;
             document.getElementById('modal-success').classList.remove('hidden');
 
             const numAdmin = NUMERO_ADMIN; 
@@ -390,9 +403,8 @@
             const msg = `🚨 *NOVA CORRIDA* 🚨%0A%0A👤 *Loja:* ${userProfile.nome_loja} (Cód: ${userProfile.codigo_visual})%0A📍 *DE:* ${document.getElementById('origem').value}%0A🏁 *PARA:* ${document.getElementById('destino').value}%0A${document.getElementById('complemento').value ? '🏢 ' + document.getElementById('complemento').value + '%0A' : ''}${document.getElementById('referencia').value ? '🏛️ ' + document.getElementById('referencia').value + '%0A' : ''}--------------------------------%0A📏 ${distanciaFinal}km | 🔄 ${ret}%0A${avisoPagamento}%0A📦 *Pgto Produto:* ${pgProd}%0A💲 *FRETE: R$ ${valorFinal}*%0A🔑 *Prot:* %23${proto}%0A🔒 *Entrega Segura:* Solicite o PIN!`;
             window.open(`https://wa.me/${numAdmin}?text=${msg}`, '_blank');
         }
-
-        // PERFIL (SALVAR)
-                function abrirPerfil() { document.getElementById('perf-nome-loja').value = userProfile.nome_loja || ""; document.getElementById('perf-nome-resp').value = userProfile.responsavel || ""; document.getElementById('perf-zap').value = userProfile.whatsapp || ""; document.getElementById('perf-cep').value = userProfile.cep || ""; document.getElementById('perf-rua').value = userProfile.endereco ? userProfile.endereco.split(',')[0] : ""; document.getElementById('perf-num').value = userProfile.numero || ""; document.getElementById('perf-bairro').value = userProfile.bairro || ""; document.getElementById('perf-cidade').value = userProfile.cidade || ""; showScreen('profile'); }
+              // PERFIL (SALVAR)
+        function abrirPerfil() { document.getElementById('perf-nome-loja').value = userProfile.nome_loja || ""; document.getElementById('perf-nome-resp').value = userProfile.responsavel || ""; document.getElementById('perf-zap').value = userProfile.whatsapp || ""; document.getElementById('perf-cep').value = userProfile.cep || ""; document.getElementById('perf-rua').value = userProfile.endereco ? userProfile.endereco.split(',')[0] : ""; document.getElementById('perf-num').value = userProfile.numero || ""; document.getElementById('perf-bairro').value = userProfile.bairro || ""; document.getElementById('perf-cidade').value = userProfile.cidade || ""; showScreen('profile'); }
         async function salvarPerfil() {
             const loja = document.getElementById('perf-nome-loja').value; const resp = document.getElementById('perf-nome-resp').value; const zap = document.getElementById('perf-zap').value; const cep = document.getElementById('perf-cep').value; const rua = document.getElementById('perf-rua').value; const num = document.getElementById('perf-num').value; const bairro = document.getElementById('perf-bairro').value; const cidade = document.getElementById('perf-cidade').value; const endereco = `${rua}, ${num}, ${bairro}`;
             const btn = document.getElementById('btn-salvar-perf'); const load = document.getElementById('loading-perf'); btn.disabled = true; load.classList.remove('hidden');
@@ -401,8 +413,15 @@
                 if(error) throw error; alert("Salvo!"); await carregarPerfil(); showScreen('app');
             } catch(e) { alert("Erro ao salvar."); } finally { btn.disabled = false; load.classList.add('hidden'); }
         }
+        function abrirRecarga() { document.getElementById('modal-recarga').classList.remove('hidden'); }
+        function fecharRecarga() { document.getElementById('modal-recarga').classList.add('hidden'); }
+        async function gerarPixRecarga() {
+            const valor = parseFloat(document.getElementById('valor-recarga').value); if(!valor || valor < 5) { alert("Mínimo R$ 5,00"); return; } if(!MAKE_WEBHOOK_URL) { alert("Recarga indisponível."); return; } document.getElementById('step-valor').classList.add('hidden'); document.getElementById('loading-pix').classList.remove('hidden');
+            try { const res = await fetch(MAKE_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userSession.user.id, valor: valor, nome: userProfile.nome_loja, origem: "Drop App" }) }); const data = await res.json(); if(data.payload) { document.getElementById('loading-pix').classList.add('hidden'); document.getElementById('step-qr').classList.remove('hidden'); document.getElementById('pix-copia-cola').value = data.payload; document.getElementById('qrcode-container').innerHTML = ""; new QRCode(document.getElementById("qrcode-container"), { text: data.payload, width: 128, height: 128 }); } else { alert("Erro ao gerar Pix."); fecharRecarga(); } } catch(e) { alert("Erro de comunicação."); fecharRecarga(); }
+        }
+        function copiarPix() { document.getElementById('pix-copia-cola').select(); document.execCommand("copy"); alert("Copiado!"); }
         function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) { var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1); var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; }
         function deg2rad(deg) { return deg * (Math.PI/180); }
     </script>
 </body>
-</html>
+</html> 
