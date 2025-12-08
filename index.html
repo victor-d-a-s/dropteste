@@ -392,7 +392,7 @@
         }
 
         // PERFIL (SALVAR)
-        function abrirPerfil() { document.getElementById('perf-nome-loja').value = userProfile.nome_loja || ""; document.getElementById('perf-nome-resp').value = userProfile.responsavel || ""; document.getElementById('perf-zap').value = userProfile.whatsapp || ""; document.getElementById('perf-cep').value = userProfile.cep || ""; document.getElementById('perf-rua').value = userProfile.endereco ? userProfile.endereco.split(',')[0] : ""; document.getElementById('perf-num').value = userProfile.numero || ""; document.getElementById('perf-bairro').value = userProfile.bairro || ""; document.getElementById('perf-cidade').value = userProfile.cidade || ""; showScreen('profile'); }
+                function abrirPerfil() { document.getElementById('perf-nome-loja').value = userProfile.nome_loja || ""; document.getElementById('perf-nome-resp').value = userProfile.responsavel || ""; document.getElementById('perf-zap').value = userProfile.whatsapp || ""; document.getElementById('perf-cep').value = userProfile.cep || ""; document.getElementById('perf-rua').value = userProfile.endereco ? userProfile.endereco.split(',')[0] : ""; document.getElementById('perf-num').value = userProfile.numero || ""; document.getElementById('perf-bairro').value = userProfile.bairro || ""; document.getElementById('perf-cidade').value = userProfile.cidade || ""; showScreen('profile'); }
         async function salvarPerfil() {
             const loja = document.getElementById('perf-nome-loja').value; const resp = document.getElementById('perf-nome-resp').value; const zap = document.getElementById('perf-zap').value; const cep = document.getElementById('perf-cep').value; const rua = document.getElementById('perf-rua').value; const num = document.getElementById('perf-num').value; const bairro = document.getElementById('perf-bairro').value; const cidade = document.getElementById('perf-cidade').value; const endereco = `${rua}, ${num}, ${bairro}`;
             const btn = document.getElementById('btn-salvar-perf'); const load = document.getElementById('loading-perf'); btn.disabled = true; load.classList.remove('hidden');
@@ -405,3 +405,4 @@
         function deg2rad(deg) { return deg * (Math.PI/180); }
     </script>
 </body>
+</html>
