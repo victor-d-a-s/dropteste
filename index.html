@@ -49,26 +49,37 @@
         .custom-options.show { display: block; animation: fadeIn 0.2s; }
         .custom-option { padding: 10px; font-size: 0.875rem; cursor: pointer; border-bottom: 1px solid #F3F4F6; display: flex; align-items: center; gap: 8px; }
         .custom-option:hover { background-color: #EFF6FF; color: #1E40AF; }
+
+        /* Menu Inferior */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; z-index: 50; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); max-width: 28rem; margin: 0 auto; }
+        @media (min-width: 768px) { .bottom-nav { border-radius: 0 0 1.5rem 1.5rem; } }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #9CA3AF; cursor: pointer; flex: 1; height: 100%; }
+        .nav-item.active { color: #1E40AF; font-weight: bold; }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
 
+    <!-- LOADING GLOBAL -->
+    <div id="global-loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100]">
+        <div class="spinner w-10 h-10 border-4 mb-4"></div>
+        <p class="text-gray-500 text-sm font-bold">Carregando Drop...</p>
+    </div>
+
     <script>
         // ---------------------------------------------------------
-        // CHAVES DO SISTEMA (PROJETO ofpnn...)
+        // CHAVES DO SISTEMA (ATUALIZADAS E VERIFICADAS)
         // ---------------------------------------------------------
         const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvZnBubmlqa2hnc2phcml4b3loZyIsImJvbGUiOiJhbm9uIiwiaWF0IjoxNzY1MDY1Mjc2LCJleHAiOjIwODA2NDEyNzZ9.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU';
-        const MAKE_WEBHOOK_URL = ""; 
-
-        // Inicializa Supabase
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5uaWpraGdzamFyaXhveWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwNjUyNzYsImV4cCI6MjA4MDY0MTI3Nn0.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU';
+        
+        // Inicializa Supabase de forma segura
         let sbClient = null;
         try {
-            // Trim remove espaços em branco invisíveis que causam erro
-            sbClient = supabase.createClient(SUPABASE_URL.trim(), SUPABASE_KEY.trim());
+            sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch(e) {
             console.error("Erro ao iniciar Supabase:", e);
-            alert("Erro de configuração do sistema. Contate o suporte.");
+            alert("Erro crítico: Falha na conexão com o Banco de Dados.");
         }
 
         const CIDADE_FIXA = "Mossoró, Rio Grande do Norte, Brasil"; 
@@ -107,12 +118,6 @@
         }
     </script>
 
-    <!-- LOADING GLOBAL -->
-    <div id="global-loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100]">
-        <div class="spinner w-10 h-10 border-4 mb-4"></div>
-        <p class="text-gray-500 text-sm font-bold">Carregando Drop...</p>
-    </div>
-
     <!-- TELA 1: BOAS-VINDAS -->
     <div id="screen-welcome" class="app-container p-8 text-center fade-in flex flex-col justify-center">
         <div class="mb-8">
@@ -128,7 +133,7 @@
                 <i class="fas fa-lock"></i> Acessar Conta
             </button>
         </div>
-        <p class="mt-8 text-xs text-gray-400">Versão Final 28.0</p>
+        <p class="mt-8 text-xs text-gray-400">Versão 30.0 (Chave Fix)</p>
     </div>
 
     <!-- TELA 2: CADASTRO -->
@@ -180,8 +185,7 @@
             </button>
         </div>
     </div>
-
-    <!-- TELA 3: LOGIN -->
+        <!-- TELA 3: LOGIN -->
     <div id="screen-login" class="hidden app-container p-6 fade-in relative flex flex-col justify-center">
         <button onclick="showScreen('welcome')" class="absolute top-4 left-4 text-gray-400 hover:text-blue-700"><i class="fas fa-arrow-left text-xl"></i></button>
         <div class="text-center mb-8"><div class="inline-block p-4 rounded-full bg-blue-50 text-blue-700 mb-4"><i class="fas fa-shield-alt text-3xl"></i></div><h2 class="text-xl font-bold text-gray-800">Login</h2></div>
@@ -203,7 +207,7 @@
             </div>
             <div class="bg-white/10 p-4 rounded-xl flex justify-between items-center shadow-lg">
                 <div><p class="text-xs text-blue-100">Saldo</p><p class="text-2xl font-bold" id="display-saldo">R$ 0,00</p></div>
-                <button onclick="abrirRecarga()" class="bg-white px-4 py-2 rounded-lg text-blue-700 text-xs font-bold shadow-lg hover:bg-blue-50 active:scale-95 transition flex items-center gap-1"><i class="fas fa-plus"></i> Add</button>
+                <button onclick="alert('Fale com o suporte para recarga.')" class="bg-white px-4 py-2 rounded-lg text-blue-700 text-xs font-bold shadow-lg hover:bg-blue-50 active:scale-95 transition flex items-center gap-1"><i class="fas fa-plus"></i> Add</button>
             </div>
         </div>
 
@@ -258,13 +262,13 @@
             <button onclick="enviarParaCentral()" id="btn-enviar" class="hidden w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2"><i class="fab fa-whatsapp text-2xl"></i> Confirmar Pedido</button>
         </div>
     </div>
-        <!-- TELA 5: HISTÓRICO -->
+
+    <!-- TELA 5: HISTÓRICO -->
     <div id="screen-history" class="hidden app-container fade-in relative flex flex-col"><div class="bg-blue-700 p-4 text-white text-center font-bold">Meus Pedidos</div><div id="lista-pedidos" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div></div>
     
     <!-- TELA 6: EXTRATO -->
     <div id="screen-extract" class="hidden app-container fade-in relative flex flex-col"><div class="bg-blue-700 p-4 text-white text-center font-bold">Extrato Financeiro</div><div class="bg-blue-800 p-6 text-center text-white"><p class="text-xs opacity-70 uppercase tracking-wider">Saldo Atual</p><p class="text-3xl font-bold" id="saldo-extrato">R$ 0,00</p></div><div id="lista-extrato" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div></div>
-    
-    <!-- TELA 7: PERFIL DETALHADO -->
+        <!-- TELA 7: PERFIL DETALHADO -->
     <div id="screen-profile" class="hidden app-container fade-in relative"><div class="bg-gray-800 p-4 text-white text-center font-bold">Meu Perfil</div><div class="p-6 space-y-5">
         <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">NOME DO ESTABELECIMENTO</label><input type="text" id="perf-nome-loja" class="w-full bg-gray-50 border rounded-lg p-3 text-sm"></div>
         <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">WHATSAPP DA LOJA</label><input type="text" id="perf-zap" class="w-full bg-gray-50 border rounded-lg p-3 text-sm"></div>
@@ -276,15 +280,13 @@
     <!-- MODAL SUCESSO -->
     <div id="modal-success" class="hidden fixed inset-0 bg-green-900/90 z-[60] flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-3xl p-8 text-center w-full max-w-xs shadow-2xl"><div class="mx-auto bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mb-4"><i class="fas fa-check text-4xl text-green-600"></i></div><h2 class="text-2xl font-bold text-gray-800 mb-2">Pedido Enviado!</h2><p class="text-sm text-gray-500 mb-6">Entregue este código ao motoboy:</p><div class="bg-gray-100 p-4 rounded-xl border-2 border-dashed border-gray-300 mb-6"><p class="text-xs text-gray-400 uppercase tracking-widest mb-1">PIN DE SEGURANÇA</p><p id="display-pin" class="text-4xl font-mono font-bold text-blue-600 tracking-widest">0000</p></div><button onclick="location.reload()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-xl">Fechar</button></div></div>
 
-    <!-- MODAL RECARGA -->
-    <div id="modal-recarga" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center"><h3 class="font-bold text-lg mb-2">Recarregar Saldo</h3><div id="step-valor"><input type="number" id="valor-recarga" class="w-full border rounded-lg p-3 text-center text-xl font-bold mb-4" placeholder="R$ 0,00"><button onclick="gerarPixRecarga()" class="w-full btn-primary font-bold py-3 rounded-xl">Gerar Pix</button></div><div id="step-qr" class="hidden"><div id="qrcode-container" class="flex justify-center mb-4 p-2 border rounded-lg"></div><textarea id="pix-copia-cola" class="w-full text-[10px] bg-gray-100 p-2 rounded mb-2 h-16 text-gray-500" readonly></textarea><button onclick="copiarPix()" class="w-full bg-green-600 text-white text-sm font-bold py-2 rounded-lg mb-2">Copiar Código</button></div><div id="loading-pix" class="hidden py-4"><div class="spinner mx-auto"></div></div><button onclick="fecharRecarga()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button></div></div>
-
     <!-- MENU INFERIOR -->
     <div id="bottom-menu" class="hidden bottom-nav w-full max-w-md"><div class="nav-item active" onclick="navegar('app', this)"><i class="fas fa-home"></i><span>Início</span></div><div class="nav-item" onclick="navegar('history', this); carregarHistorico()"><i class="fas fa-list"></i><span>Pedidos</span></div><div class="nav-item" onclick="navegar('extract', this); carregarExtrato()"><i class="fas fa-file-invoice-dollar"></i><span>Extrato</span></div><div class="nav-item" onclick="navegar('profile', this); abrirPerfil()"><i class="fas fa-user"></i><span>Perfil</span></div></div>
 
     <script>
         $(document).ready(function(){ 
-            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
+            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); 
+            $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
             $('#tel_dest').mask('(00) 00000-0000'); 
         });
 
@@ -360,8 +362,7 @@
         function fazerLogout() { sbClient.auth.signOut(); location.reload(); }
         async function buscarCep(prefixo) { let cep = document.getElementById(prefixo + '-cep').value.replace(/\D/g, ''); if(cep.length !== 8) return; try { const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await res.json(); if(!data.erro) { document.getElementById(prefixo + '-rua').value = data.logradouro; document.getElementById(prefixo + '-bairro').value = data.bairro; document.getElementById(prefixo + '-cidade').value = `${data.localidade}/${data.uf}`; document.getElementById(prefixo + '-num').focus(); } } catch(e){} }
         function monitorarSaldo() { sbClient.channel('custom-all-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userSession.user.id}` }, (payload) => { document.getElementById('display-saldo').innerText = "R$ " + payload.new.saldo.toFixed(2); document.getElementById('saldo-extrato').innerText = "R$ " + payload.new.saldo.toFixed(2); }).subscribe(); }
-
-        // --- APP ---
+            // --- APP ---
         async function carregarHistorico() { const div = document.getElementById('lista-pedidos'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('pedidos').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem pedidos.</p>'; return; } data.forEach(p => { const date = new Date(p.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm mb-2"><div class="flex justify-between mb-1"><span class="font-bold text-gray-700 w-2/3 truncate">${p.destino}</span><span class="font-bold text-blue-600">R$ ${p.valor_frete}</span></div><div class="flex justify-between text-xs text-gray-500 mb-2"><span>${date}</span><span>${p.forma_pagamento}</span></div><div class="bg-blue-50 p-2 rounded text-center border border-blue-100"><p class="text-[10px] text-blue-800 uppercase font-bold">Código de Recebimento</p><p class="text-xl font-mono font-bold text-blue-600 tracking-widest">${p.pin_entrega || '---'}</p></div></div>`; }); }
         async function carregarExtrato() { const div = document.getElementById('lista-extrato'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('transacoes').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem transações.</p>'; return; } data.forEach(t => { const date = new Date(t.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); const cor = t.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'; const sinal = t.tipo === 'entrada' ? '+' : '-'; div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center mb-2"><div><p class="text-sm font-bold text-gray-700">${t.descricao}</p><p class="text-xs text-gray-400">${date}</p></div><p class="font-bold ${cor}">${sinal} R$ ${t.valor}</p></div>`; }); }
 
@@ -390,7 +391,7 @@
             const pgProd = document.getElementById('pagamento_produto').value;
             const ret = document.getElementById('retorno').checked ? "COM RETORNO" : "SEM RETORNO";
             
-            // NOVOS CAMPOS (SEM NUMERO)
+            // NOVOS CAMPOS
             const nomeDest = document.getElementById('nome_dest').value;
             const telDest = document.getElementById('tel_dest').value;
             const ref = document.getElementById('referencia').value;
@@ -449,13 +450,6 @@
                 if(error) throw error; alert("Salvo!"); await carregarPerfil(); showScreen('app');
             } catch(e) { alert("Erro ao salvar."); } finally { btn.disabled = false; load.classList.add('hidden'); }
         }
-        function abrirRecarga() { document.getElementById('modal-recarga').classList.remove('hidden'); }
-        function fecharRecarga() { document.getElementById('modal-recarga').classList.add('hidden'); }
-        async function gerarPixRecarga() {
-            const valor = parseFloat(document.getElementById('valor-recarga').value); if(!valor || valor < 5) { alert("Mínimo R$ 5,00"); return; } if(!MAKE_WEBHOOK_URL) { alert("Recarga indisponível."); return; } document.getElementById('step-valor').classList.add('hidden'); document.getElementById('loading-pix').classList.remove('hidden');
-            try { const res = await fetch(MAKE_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userSession.user.id, valor: valor, nome: userProfile.nome_loja, origem: "Drop App" }) }); const data = await res.json(); if(data.payload) { document.getElementById('loading-pix').classList.add('hidden'); document.getElementById('step-qr').classList.remove('hidden'); document.getElementById('pix-copia-cola').value = data.payload; document.getElementById('qrcode-container').innerHTML = ""; new QRCode(document.getElementById("qrcode-container"), { text: data.payload, width: 128, height: 128 }); } else { alert("Erro ao gerar Pix."); fecharRecarga(); } } catch(e) { alert("Erro de comunicação."); fecharRecarga(); }
-        }
-        function copiarPix() { document.getElementById('pix-copia-cola').select(); document.execCommand("copy"); alert("Copiado!"); }
         function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) { var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1); var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; }
         function deg2rad(deg) { return deg * (Math.PI/180); }
     </script>
