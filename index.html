@@ -2,12 +2,11 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Drop Entregas</title>
-    
     <!-- Bibliotecas -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <!-- Supabase -->
@@ -16,17 +15,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background-color: #f3f4f6; 
-            padding-bottom: 100px; /* Espaço extra para o menu */
-        }
-        
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f3f4f6; padding-bottom: 90px; }
         .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         .btn-primary { background-color: #1E40AF; color: white; transition: all 0.2s; }
-        .btn-primary:hover { background-color: #1E3A8A; transform: scale(1.02); }
+        .btn-primary:hover { background-color: #1E3A8A; transform: scale(1.01); }
         .btn-primary:active { transform: scale(0.98); }
         .btn-primary:disabled { background-color: #93C5FD; cursor: not-allowed; transform: none; }
         
@@ -44,26 +38,16 @@
         input:checked + .slider { background-color: #1E40AF; }
         input:checked + .slider:before { transform: translateX(20px); }
 
+        /* Menu Inferior */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; z-index: 50; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); max-width: 28rem; margin: 0 auto; }
+        @media (min-width: 768px) { .bottom-nav { border-radius: 0 0 1.5rem 1.5rem; } }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #9CA3AF; cursor: pointer; flex: 1; height: 100%; }
+        .nav-item.active { color: #1E40AF; font-weight: bold; }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; }
+
         .input-readonly { background-color: #F3F4F6; color: #4B5563; cursor: not-allowed; }
-        
-        /* Container Responsivo */
-        .app-container { width: 100%; min-height: 100vh; background-color: white; padding-bottom: 100px; }
-        @media (min-width: 768px) { 
-            .app-container { 
-                max-width: 28rem; 
-                min-height: auto; 
-                height: 90vh; 
-                border-radius: 1.5rem; 
-                overflow: hidden; 
-                overflow-y: auto; 
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
-                position: relative; 
-                /* Esconde scrollbar no desktop */
-                -ms-overflow-style: none; scrollbar-width: none;
-            } 
-            .app-container::-webkit-scrollbar { display: none; }
-            body { display: flex; align-items: center; justify-content: center; min-height: 100vh; } 
-        }
+        .app-container { width: 100%; min-height: 100vh; background-color: white; padding-bottom: 80px; }
+        @media (min-width: 768px) { .app-container { max-width: 28rem; min-height: auto; height: 90vh; border-radius: 1.5rem; overflow: hidden; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; } body { display: flex; align-items: center; justify-content: center; min-height: 100vh; } }
 
         /* Dropdown */
         .custom-select-btn { width: 100%; background: white; border: 1px solid #E5E7EB; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.875rem; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s; }
@@ -72,92 +56,16 @@
         .custom-options.show { display: block; animation: fadeIn 0.2s; }
         .custom-option { padding: 10px; font-size: 0.875rem; cursor: pointer; border-bottom: 1px solid #F3F4F6; display: flex; align-items: center; gap: 8px; }
         .custom-option:hover { background-color: #EFF6FF; color: #1E40AF; }
-
-        /* --- MENU INFERIOR PREMIUM (NOVO) --- */
-        .bottom-nav { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            background: rgba(255, 255, 255, 0.95); /* Efeito vidro */
-            backdrop-filter: blur(10px);
-            border-top: 1px solid #e5e7eb; 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center;
-            padding: 12px 10px; 
-            padding-bottom: max(12px, env(safe-area-inset-bottom)); /* Segurança iPhone X */
-            z-index: 50; 
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); 
-            max-width: 28rem; /* Limita largura no desktop */
-            margin: 0 auto;   /* Centraliza no desktop */
-            transition: all 0.3s ease;
-        }
-
-        /* Ajuste Fino para Desktop */
-        @media (min-width: 768px) {
-            .bottom-nav {
-                bottom: 20px; /* Flutua um pouco */
-                border-radius: 20px; /* Arredonda */
-                width: 90%; /* Não ocupa tudo */
-                border: 1px solid #e5e7eb;
-            }
-        }
-
-        .nav-item { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            color: #9CA3AF; /* Cinza inativo */
-            cursor: pointer; 
-            flex: 1; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            padding: 4px;
-            border-radius: 12px;
-        }
-        
-        .nav-item:active { transform: scale(0.95); background-color: #f3f4f6; }
-
-        .nav-item i { 
-            font-size: 20px; 
-            margin-bottom: 4px; 
-            transition: transform 0.2s;
-        }
-        
-        .nav-item span {
-            font-size: 10px;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        /* Estado Ativo */
-        .nav-item.active { color: #1E40AF; }
-        .nav-item.active i { transform: translateY(-2px); }
-        .nav-item.active span { font-weight: 700; }
-        
-        /* Indicador (Ponto Azul) */
-        .nav-item.active::after {
-            content: '';
-            position: absolute;
-            bottom: -6px; /* Posiciona abaixo */
-            width: 4px;
-            height: 4px;
-            background-color: #1E40AF;
-            border-radius: 50%;
-            animation: fadeIn 0.3s;
-        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
 
     <script>
         // ---------------------------------------------------------
-        // CHAVES DO SISTEMA
+        // CHAVES DO SISTEMA (COM .TRIM() PARA SEGURANÇA)
         // ---------------------------------------------------------
-        const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvZnBubmlqa2hnc2phcml4b3loZyIsImJvbGUiOiJhbm9uIiwiaWF0IjoxNzY1MDY1Mjc2LCJleHAiOjIwODA2NDEyNzZ9.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU';
+        const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'.trim(); 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvZnBubmlqa2hnc2phcml4b3loZyIsImJvbGUiOiJhbm9uIiwiaWF0IjoxNzY1MDY1Mjc2LCJleHAiOjIwODA2NDEyNzZ9.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU'.trim();
         const MAKE_WEBHOOK_URL = ""; 
 
         // Inicializa Supabase
@@ -225,7 +133,7 @@
                 <i class="fas fa-lock"></i> Acessar Conta
             </button>
         </div>
-        <p class="mt-8 text-xs text-gray-400">Versão Final 30.0</p>
+        <p class="mt-8 text-xs text-gray-400">Versão Final 29.0</p>
     </div>
 
     <!-- TELA 2: CADASTRO -->
@@ -375,13 +283,12 @@
 
     <!-- MODAL RECARGA -->
     <div id="modal-recarga" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center"><h3 class="font-bold text-lg mb-2">Recarregar Saldo</h3><div id="step-valor"><input type="number" id="valor-recarga" class="w-full border rounded-lg p-3 text-center text-xl font-bold mb-4" placeholder="R$ 0,00"><button onclick="gerarPixRecarga()" class="w-full btn-primary font-bold py-3 rounded-xl">Gerar Pix</button></div><div id="step-qr" class="hidden"><div id="qrcode-container" class="flex justify-center mb-4 p-2 border rounded-lg"></div><textarea id="pix-copia-cola" class="w-full text-[10px] bg-gray-100 p-2 rounded mb-2 h-16 text-gray-500" readonly></textarea><button onclick="copiarPix()" class="w-full bg-green-600 text-white text-sm font-bold py-2 rounded-lg mb-2">Copiar Código</button></div><div id="loading-pix" class="hidden py-4"><div class="spinner mx-auto"></div></div><button onclick="fecharRecarga()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button></div></div>
-       <!-- MENU INFERIOR -->
+        <!-- MENU INFERIOR -->
     <div id="bottom-menu" class="hidden bottom-nav w-full max-w-md"><div class="nav-item active" onclick="navegar('app', this)"><i class="fas fa-home"></i><span>Início</span></div><div class="nav-item" onclick="navegar('history', this); carregarHistorico()"><i class="fas fa-list"></i><span>Pedidos</span></div><div class="nav-item" onclick="navegar('extract', this); carregarExtrato()"><i class="fas fa-file-invoice-dollar"></i><span>Extrato</span></div><div class="nav-item" onclick="navegar('profile', this); abrirPerfil()"><i class="fas fa-user"></i><span>Perfil</span></div></div>
 
     <script>
         $(document).ready(function(){ 
-            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); 
-            $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
+            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
             $('#tel_dest').mask('(00) 00000-0000'); 
         });
 
@@ -457,8 +364,7 @@
         function fazerLogout() { sbClient.auth.signOut(); location.reload(); }
         async function buscarCep(prefixo) { let cep = document.getElementById(prefixo + '-cep').value.replace(/\D/g, ''); if(cep.length !== 8) return; try { const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await res.json(); if(!data.erro) { document.getElementById(prefixo + '-rua').value = data.logradouro; document.getElementById(prefixo + '-bairro').value = data.bairro; document.getElementById(prefixo + '-cidade').value = `${data.localidade}/${data.uf}`; document.getElementById(prefixo + '-num').focus(); } } catch(e){} }
         function monitorarSaldo() { sbClient.channel('custom-all-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userSession.user.id}` }, (payload) => { document.getElementById('display-saldo').innerText = "R$ " + payload.new.saldo.toFixed(2); document.getElementById('saldo-extrato').innerText = "R$ " + payload.new.saldo.toFixed(2); }).subscribe(); }
-
-        // --- APP ---
+               // --- APP ---
         async function carregarHistorico() { const div = document.getElementById('lista-pedidos'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('pedidos').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem pedidos.</p>'; return; } data.forEach(p => { const date = new Date(p.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm mb-2"><div class="flex justify-between mb-1"><span class="font-bold text-gray-700 w-2/3 truncate">${p.destino}</span><span class="font-bold text-blue-600">R$ ${p.valor_frete}</span></div><div class="flex justify-between text-xs text-gray-500 mb-2"><span>${date}</span><span>${p.forma_pagamento}</span></div><div class="bg-blue-50 p-2 rounded text-center border border-blue-100"><p class="text-[10px] text-blue-800 uppercase font-bold">Código de Recebimento</p><p class="text-xl font-mono font-bold text-blue-600 tracking-widest">${p.pin_entrega || '---'}</p></div></div>`; }); }
         async function carregarExtrato() { const div = document.getElementById('lista-extrato'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('transacoes').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem transações.</p>'; return; } data.forEach(t => { const date = new Date(t.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); const cor = t.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'; const sinal = t.tipo === 'entrada' ? '+' : '-'; div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center mb-2"><div><p class="text-sm font-bold text-gray-700">${t.descricao}</p><p class="text-xs text-gray-400">${date}</p></div><p class="font-bold ${cor}">${sinal} R$ ${t.valor}</p></div>`; }); }
 
@@ -487,12 +393,13 @@
             const pgProd = document.getElementById('pagamento_produto').value;
             const ret = document.getElementById('retorno').checked ? "COM RETORNO" : "SEM RETORNO";
             
-            // NOVOS CAMPOS
+            // NOVOS CAMPOS (SEM NUMERO)
             const nomeDest = document.getElementById('nome_dest').value;
             const telDest = document.getElementById('tel_dest').value;
             const ref = document.getElementById('referencia').value;
-                        // VALIDAÇÃO RIGOROSA
-            if(!nomeDest || !telDest || !ref) { alert("Preencha os dados do cliente (Nome, Zap e Ref)."); return; }
+
+            // VALIDAÇÃO RIGOROSA
+            if(!nomeDest || !telDest || !ref) { alert("Preencha todos os detalhes do cliente e referência."); return; }
             if(!validarTelefone(telDest)) { alert("WhatsApp do Cliente inválido!"); return; }
 
             if(pgEnt === "Carteira") {
@@ -516,8 +423,8 @@
                 valor_frete: parseFloat(valorFinal),
                 forma_pagamento: pgEnt,
                 pin_entrega: pinSeguranca,
-                nome_destinatario: nomeDest, // Salva no banco
-                telefone_destinatario: telDest // Salva no banco
+                nome_destinatario: nomeDest, 
+                telefone_destinatario: telDest
             }]);
 
             // MODAL SUCESSO
@@ -529,13 +436,12 @@
             let valorParaMotoboy = parseFloat(valorFinal) - TAXA_FIXA_CENTRAL; if(valorParaMotoboy < 4) valorParaMotoboy = 4;
             let proto = valorParaMotoboy.toFixed(2).replace('.', ''); while(proto.length < 5) proto = "0" + proto;
             
-            // MENSAGEM WHATSAPP ATUALIZADA
+            // MENSAGEM WHATSAPP SEM O CAMPO NÚMERO
             const msg = `🚨 *NOVA CORRIDA* 🚨%0A%0A👤 *Loja:* ${userProfile.nome_loja} (Cód: ${userProfile.codigo_visual})%0A📦 *Cliente:* ${nomeDest || 'Não inf.'} (${telDest || ''})%0A📍 *DE:* ${document.getElementById('origem').value}%0A🏁 *PARA:* ${document.getElementById('destino').value}%0A${document.getElementById('complemento').value ? '🏢 ' + document.getElementById('complemento').value + '%0A' : ''}${document.getElementById('referencia').value ? '🏛️ ' + document.getElementById('referencia').value + '%0A' : ''}--------------------------------%0A📏 ${distanciaFinal}km | 🔄 ${ret}%0A${avisoPagamento}%0A📦 *Pgto Produto:* ${pgProd}%0A💲 *FRETE: R$ ${valorFinal}*%0A🔑 *Prot:* %23${proto}%0A🔒 *PIN:* ${pinSeguranca}`;
             
             window.open(`https://wa.me/${numAdmin}?text=${msg}`, '_blank');
         }
-
-        // PERFIL (SALVAR)
+                // PERFIL (SALVAR)
         function abrirPerfil() { document.getElementById('perf-nome-loja').value = userProfile.nome_loja || ""; document.getElementById('perf-nome-resp').value = userProfile.responsavel || ""; document.getElementById('perf-zap').value = userProfile.whatsapp || ""; document.getElementById('perf-cep').value = userProfile.cep || ""; document.getElementById('perf-rua').value = userProfile.endereco ? userProfile.endereco.split(',')[0] : ""; document.getElementById('perf-num').value = userProfile.numero || ""; document.getElementById('perf-bairro').value = userProfile.bairro || ""; document.getElementById('perf-cidade').value = userProfile.cidade || ""; showScreen('profile'); }
         async function salvarPerfil() {
             const loja = document.getElementById('perf-nome-loja').value; const resp = document.getElementById('perf-nome-resp').value; const zap = document.getElementById('perf-zap').value; const cep = document.getElementById('perf-cep').value; const rua = document.getElementById('perf-rua').value; const num = document.getElementById('perf-num').value; const bairro = document.getElementById('perf-bairro').value; const cidade = document.getElementById('perf-cidade').value; const endereco = `${rua}, ${num}, ${bairro}`;
