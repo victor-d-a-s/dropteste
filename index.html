@@ -51,11 +51,16 @@
         .custom-option:hover { background-color: #EFF6FF; color: #1E40AF; }
         
         /* Menu Inferior */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; z-index: 50; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); max-width: 28rem; margin: 0 auto; }
-        @media (min-width: 768px) { .bottom-nav { border-radius: 0 0 1.5rem 1.5rem; } }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #9CA3AF; cursor: pointer; flex: 1; height: 100%; }
-        .nav-item.active { color: #1E40AF; font-weight: bold; }
-        .nav-item i { font-size: 22px; margin-bottom: 4px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 10px; padding-bottom: max(12px, env(safe-area-inset-bottom)); z-index: 50; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); max-width: 28rem; margin: 0 auto; transition: all 0.3s ease; }
+        @media (min-width: 768px) { .bottom-nav { bottom: 20px; border-radius: 20px; width: 90%; border: 1px solid #e5e7eb; } }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9CA3AF; cursor: pointer; flex: 1; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; padding: 4px; border-radius: 12px; }
+        .nav-item:active { transform: scale(0.95); background-color: #f3f4f6; }
+        .nav-item i { font-size: 20px; margin-bottom: 4px; transition: transform 0.2s; }
+        .nav-item span { font-size: 10px; font-weight: 500; transition: color 0.2s; }
+        .nav-item.active { color: #1E40AF; }
+        .nav-item.active i { transform: translateY(-2px); }
+        .nav-item.active span { font-weight: 700; }
+        .nav-item.active::after { content: ''; position: absolute; bottom: -6px; width: 4px; height: 4px; background-color: #1E40AF; border-radius: 50%; animation: fadeIn 0.3s; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
@@ -66,20 +71,20 @@
         <p class="text-gray-500 text-sm font-bold">Carregando Drop...</p>
     </div>
 
+    <!-- SCRIPT DE INICIALIZAÇÃO -->
     <script>
-        // ---------------------------------------------------------
-        // CHAVES DO SISTEMA (VERIFICADAS)
-        // ---------------------------------------------------------
-        const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvZnBubmlqa2hnc2phcml4b3loZyIsImJvbGUiOiJhbm9uIiwiaWF0IjoxNzY1MDY1Mjc2LCJleHAiOjIwODA2NDEyNzZ9.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU';
+        // CHAVES LIMPAS
+        const SUPABASE_URL = 'https://ofpnnijkhgsjarixoyhg.supabase.co'.trim();
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvZnBubmlqa2hnc2phcml4b3loZyIsImJvbGUiOiJhbm9uIiwiaWF0IjoxNzY1MDY1Mjc2LCJleHAiOjIwODA2NDEyNzZ9.dNOIIETmTz3l1HvhuT-ihAiymJqiaYZnklzzBzDGCFU'.trim();
         const MAKE_WEBHOOK_URL = ""; 
 
-        // Inicializa Supabase
+        // Inicializa
         let sbClient = null;
         try {
             sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch(e) {
-            console.error("Erro crítico Supabase:", e);
+            console.error("CRITICAL SUPABASE ERROR:", e);
+            alert("Erro de conexão com o servidor. Recarregue a página.");
         }
 
         const CIDADE_FIXA = "Mossoró, Rio Grande do Norte, Brasil"; 
@@ -90,29 +95,13 @@
         let userProfile = null;
         let distanciaFinal = 0; let valorFinal = 0;
 
-        // --- INICIALIZAÇÃO BLINDADA ---
         window.onload = async function() {
             const globalLoad = document.getElementById('global-loading');
-            
-            // Timeout de Segurança: Se travar por 3s, força liberação
-            const safetyTimeout = setTimeout(() => {
-                if (globalLoad && globalLoad.style.display !== 'none') {
-                    console.warn("Carregamento demorou muito. Forçando exibição.");
-                    globalLoad.style.display = 'none';
-                    if (!userSession) showScreen('welcome');
-                }
-            }, 3000);
-
             try {
-                if(!sbClient) throw new Error("Cliente DB nulo");
+                if(!sbClient) throw new Error("Cliente DB não inicializou.");
                 
                 const { data: { session }, error } = await sbClient.auth.getSession();
                 
-                if (error) {
-                    console.error("Erro de sessão:", error);
-                    throw error;
-                }
-
                 if (session) {
                     userSession = session;
                     await carregarPerfil();
@@ -121,17 +110,14 @@
                     showScreen('welcome');
                 }
             } catch(e) {
-                console.error("Falha no load:", e);
-                // Se der erro, desloga para limpar cache ruim
-                if(sbClient) await sbClient.auth.signOut();
-                showScreen('welcome');
+                console.error(e);
+                showScreen('welcome'); // Falha segura
             } finally {
-                clearTimeout(safetyTimeout);
                 if(globalLoad) globalLoad.style.display = 'none';
             }
         };
 
-        // --- FUNÇÃO DE SEGURANÇA PARA UI ---
+        // UI Safe
         function safeText(id, text) {
             const el = document.getElementById(id);
             if (el) el.innerText = text;
@@ -153,7 +139,7 @@
                 <i class="fas fa-lock"></i> Acessar Conta
             </button>
         </div>
-        <p class="mt-8 text-xs text-gray-400">Versão Final 29.0</p>
+        <p class="mt-8 text-xs text-gray-400">Versão Final 31.0</p>
     </div>
 
     <!-- TELA 2: CADASTRO -->
@@ -166,7 +152,7 @@
                 <p class="text-[10px] uppercase font-bold text-blue-600 mb-2">DADOS DO ESTABELECIMENTO</p>
                 <div class="space-y-3">
                     <input type="text" id="reg-nome-loja" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="Ex: Pizzaria Sabor & Arte">
-                    <input type="text" id="reg-zap-loja" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="WhatsApp Loja (Ex: 84 99999-9999)">
+                    <input type="text" id="reg-zap-loja" class="w-full bg-white border rounded-lg p-3 text-sm outline-none focus:border-blue-600" placeholder="WhatsApp Loja (Ex: (84) 99999-9999)">
                 </div>
             </div>
             
@@ -196,8 +182,11 @@
 
             <div class="border-t pt-4 mt-2">
                 <p class="text-xs font-bold text-gray-800 mb-3 text-center uppercase tracking-widest">DADOS DE ACESSO</p>
+                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200 mb-3">
+                    <p class="text-[10px] text-yellow-800">🔒 A senha deve conter: Maiúscula, minúscula, número e caractere especial (min 8 dígitos).</p>
+                </div>
                 <input type="email" id="reg-email" class="w-full border rounded-lg p-3 text-sm mb-2" placeholder="Seu E-mail (Login)">
-                <input type="password" id="reg-senha" class="w-full border rounded-lg p-3 text-sm" placeholder="Crie uma Senha (Mín. 6 dígitos)">
+                <input type="password" id="reg-senha" class="w-full border rounded-lg p-3 text-sm" placeholder="Crie uma Senha Forte">
             </div>
 
             <button onclick="fazerCadastro()" id="btn-cad" class="w-full btn-primary font-bold py-4 rounded-xl mt-4 flex justify-center items-center gap-2">
@@ -217,8 +206,8 @@
             <button onclick="fazerLogin()" id="btn-log" class="w-full btn-primary font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2"><span>Entrar</span><div id="load-log" class="spinner hidden"></div></button>
             <p class="text-center text-xs text-blue-600 cursor-pointer hover:underline mt-4" onclick="resetarSenha()">Esqueci minha senha</p>
         </div>
-        </div>
-           <!-- TELA 4: O APP (PEDIDO) -->
+    </div>
+        <!-- TELA 4: O APP (PEDIDO) -->
     <div id="screen-app" class="hidden app-container fade-in relative">
         <div class="bg-blue-700 p-6 text-white relative">
             <div class="flex justify-between items-start mb-4">
@@ -241,13 +230,13 @@
             <div class="space-y-3">
                 <p class="text-[10px] text-center text-gray-400 font-bold uppercase mt-2">📝 Detalhes da Entrega</p>
                 
-                <!-- DADOS DO CLIENTE FINAL (OBRIGATÓRIO) -->
+                <!-- DADOS DO CLIENTE FINAL -->
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="nome_dest" placeholder="Nome do Cliente*" class="bg-white border w-full p-2 text-sm rounded-lg outline-none focus:border-blue-500">
                     <input type="text" id="tel_dest" placeholder="WhatsApp do Cliente*" class="bg-white border w-full p-2 text-sm rounded-lg outline-none focus:border-blue-500">
                 </div>
 
-                <!-- ENDEREÇO DETALHES (NUMERO REMOVIDO) -->
+                <!-- ENDEREÇO DETALHES -->
                 <div class="grid grid-cols-2 gap-2">
                     <div class="col-span-1"><input type="text" id="complemento" placeholder="Apto/Bloco" class="bg-white border w-full p-2 text-sm rounded-lg outline-none focus:border-blue-500"></div>
                     <div class="col-span-1"><input type="text" id="referencia" placeholder="Ref.*" class="bg-white border w-full p-2 text-sm rounded-lg outline-none focus:border-blue-500"></div>
@@ -288,8 +277,7 @@
     
     <!-- TELA 6: EXTRATO -->
     <div id="screen-extract" class="hidden app-container fade-in relative flex flex-col"><div class="bg-blue-700 p-4 text-white text-center font-bold">Extrato Financeiro</div><div class="bg-blue-800 p-6 text-center text-white"><p class="text-xs opacity-70 uppercase tracking-wider">Saldo Atual</p><p class="text-3xl font-bold" id="saldo-extrato">R$ 0,00</p></div><div id="lista-extrato" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div></div>
-    
-    <!-- TELA 7: PERFIL DETALHADO -->
+        <!-- TELA 7: PERFIL -->
     <div id="screen-profile" class="hidden app-container fade-in relative"><div class="bg-gray-800 p-4 text-white text-center font-bold">Meu Perfil</div><div class="p-6 space-y-5">
         <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">NOME DO ESTABELECIMENTO</label><input type="text" id="perf-nome-loja" class="w-full bg-gray-50 border rounded-lg p-3 text-sm"></div>
         <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">WHATSAPP DA LOJA</label><input type="text" id="perf-zap" class="w-full bg-gray-50 border rounded-lg p-3 text-sm"></div>
@@ -300,7 +288,8 @@
 
     <!-- MODAL SUCESSO -->
     <div id="modal-success" class="hidden fixed inset-0 bg-green-900/90 z-[60] flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-3xl p-8 text-center w-full max-w-xs shadow-2xl"><div class="mx-auto bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mb-4"><i class="fas fa-check text-4xl text-green-600"></i></div><h2 class="text-2xl font-bold text-gray-800 mb-2">Pedido Enviado!</h2><p class="text-sm text-gray-500 mb-6">Entregue este código ao motoboy:</p><div class="bg-gray-100 p-4 rounded-xl border-2 border-dashed border-gray-300 mb-6"><p class="text-xs text-gray-400 uppercase tracking-widest mb-1">PIN DE SEGURANÇA</p><p id="display-pin" class="text-4xl font-mono font-bold text-blue-600 tracking-widest">0000</p></div><button onclick="location.reload()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-xl">Fechar</button></div></div>
-        <!-- MODAL RECARGA -->
+
+    <!-- MODAL RECARGA -->
     <div id="modal-recarga" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4 fade-in"><div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center"><h3 class="font-bold text-lg mb-2">Recarregar Saldo</h3><div id="step-valor"><input type="number" id="valor-recarga" class="w-full border rounded-lg p-3 text-center text-xl font-bold mb-4" placeholder="R$ 0,00"><button onclick="gerarPixRecarga()" class="w-full btn-primary font-bold py-3 rounded-xl">Gerar Pix</button></div><div id="step-qr" class="hidden"><div id="qrcode-container" class="flex justify-center mb-4 p-2 border rounded-lg"></div><textarea id="pix-copia-cola" class="w-full text-[10px] bg-gray-100 p-2 rounded mb-2 h-16 text-gray-500" readonly></textarea><button onclick="copiarPix()" class="w-full bg-green-600 text-white text-sm font-bold py-2 rounded-lg mb-2">Copiar Código</button></div><div id="loading-pix" class="hidden py-4"><div class="spinner mx-auto"></div></div><button onclick="fecharRecarga()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button></div></div>
 
     <!-- MENU INFERIOR -->
@@ -308,8 +297,7 @@
 
     <script>
         $(document).ready(function(){ 
-            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); 
-            $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
+            $('#reg-zap-loja').mask('(00) 00000-0000'); $('#reg-zap-resp').mask('(00) 00000-0000'); $('#perf-zap').mask('(00) 00000-0000'); $('#reg-cep').mask('00000-000'); $('#perf-cep').mask('00000-000');
             $('#tel_dest').mask('(00) 00000-0000'); 
         });
 
@@ -321,14 +309,19 @@
             return true;
         }
 
+        // VALIDAR SENHA FORTE
+        function validarSenhaForte(senha) {
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+            return regex.test(senha);
+        }
+
         function toggleDropdown(id) { const list = document.getElementById(`list-${id}`); if(id === 'entrega') document.getElementById('list-produto').classList.remove('show'); else document.getElementById('list-entrega').classList.remove('show'); list.classList.toggle('show'); }
         function selectOption(id, value, text) { document.getElementById(`pagamento_${id}`).value = value; document.getElementById(`display-${id}`).innerText = text; document.getElementById(`list-${id}`).classList.remove('show'); }
         document.addEventListener('click', function(e) { if (!e.target.closest('.relative')) { document.querySelectorAll('.custom-options').forEach(el => el.classList.remove('show')); } });
 
         function showScreen(id) { ['welcome', 'register', 'login', 'app', 'history', 'extract', 'profile'].forEach(s => document.getElementById('screen-'+s).classList.add('hidden')); document.getElementById('screen-'+id).classList.remove('hidden'); if(['app', 'history', 'extract', 'profile'].includes(id)) { document.getElementById('bottom-menu').classList.remove('hidden'); document.getElementById('bottom-menu').classList.add('flex'); } else { document.getElementById('bottom-menu').classList.add('hidden'); document.getElementById('bottom-menu').classList.remove('flex'); } }
         function navegar(tela, elemento) { showScreen(tela); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); elemento.classList.add('active'); }
-
-        // --- CADASTRO ---
+                // --- CADASTRO ---
         async function fazerCadastro() {
             const email = document.getElementById('reg-email').value; const senha = document.getElementById('reg-senha').value; const loja = document.getElementById('reg-nome-loja').value; const zap = document.getElementById('reg-zap-loja').value; const resp = document.getElementById('reg-nome-resp').value; const zapResp = document.getElementById('reg-zap-resp').value; const cep = document.getElementById('reg-cep').value; const rua = document.getElementById('reg-rua').value; const num = document.getElementById('reg-num').value; const bairro = document.getElementById('reg-bairro').value; const cidade = document.getElementById('reg-cidade').value;
             const btn = document.getElementById('btn-cad'); const load = document.getElementById('load-cad');
@@ -336,7 +329,7 @@
             if(!email || !senha || !loja || !num) { alert("Preencha tudo."); return; }
             if(!validarTelefone(zap)) { alert("WhatsApp Loja inválido!"); return; }
             if(!validarTelefone(zapResp)) { alert("WhatsApp Responsável inválido!"); return; }
-            if(senha.length < 6) { alert("Senha curta."); return; }
+            if(!validarSenhaForte(senha)) { alert("Senha fraca!\nUse 8 caracteres, maiúscula, minúscula, número e símbolo."); return; }
 
             btn.disabled = true; load.classList.remove('hidden');
 
@@ -385,7 +378,8 @@
         function fazerLogout() { sbClient.auth.signOut(); location.reload(); }
         async function buscarCep(prefixo) { let cep = document.getElementById(prefixo + '-cep').value.replace(/\D/g, ''); if(cep.length !== 8) return; try { const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`); const data = await res.json(); if(!data.erro) { document.getElementById(prefixo + '-rua').value = data.logradouro; document.getElementById(prefixo + '-bairro').value = data.bairro; document.getElementById(prefixo + '-cidade').value = `${data.localidade}/${data.uf}`; document.getElementById(prefixo + '-num').focus(); } } catch(e){} }
         function monitorarSaldo() { sbClient.channel('custom-all-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userSession.user.id}` }, (payload) => { document.getElementById('display-saldo').innerText = "R$ " + payload.new.saldo.toFixed(2); document.getElementById('saldo-extrato').innerText = "R$ " + payload.new.saldo.toFixed(2); }).subscribe(); }
-                // --- APP ---
+
+            // --- APP ---
         async function carregarHistorico() { const div = document.getElementById('lista-pedidos'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('pedidos').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem pedidos.</p>'; return; } data.forEach(p => { const date = new Date(p.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm mb-2"><div class="flex justify-between mb-1"><span class="font-bold text-gray-700 w-2/3 truncate">${p.destino}</span><span class="font-bold text-blue-600">R$ ${p.valor_frete}</span></div><div class="flex justify-between text-xs text-gray-500 mb-2"><span>${date}</span><span>${p.forma_pagamento}</span></div><div class="bg-blue-50 p-2 rounded text-center border border-blue-100"><p class="text-[10px] text-blue-800 uppercase font-bold">Código de Recebimento</p><p class="text-xl font-mono font-bold text-blue-600 tracking-widest">${p.pin_entrega || '---'}</p></div></div>`; }); }
         async function carregarExtrato() { const div = document.getElementById('lista-extrato'); div.innerHTML = '<p class="text-center text-gray-400 mt-4"><i class="fas fa-spinner fa-spin"></i></p>'; const { data } = await sbClient.from('transacoes').select('*').eq('user_id', userSession.user.id).order('created_at', { ascending: false }).limit(20); div.innerHTML = ''; if(!data?.length) { div.innerHTML = '<p class="text-center text-gray-400 mt-4">Sem transações.</p>'; return; } data.forEach(t => { const date = new Date(t.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); const cor = t.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'; const sinal = t.tipo === 'entrada' ? '+' : '-'; div.innerHTML += `<div class="bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center mb-2"><div><p class="text-sm font-bold text-gray-700">${t.descricao}</p><p class="text-xs text-gray-400">${date}</p></div><p class="font-bold ${cor}">${sinal} R$ ${t.valor}</p></div>`; }); }
 
